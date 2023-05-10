@@ -2,8 +2,8 @@ mod config;
 mod log_message;
 
 use anyhow::Error;
-use tokio::io::BufReader;
-use tokio::io::{self, AsyncBufReadExt};
+use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt};
+use tokio::io::{BufReader, BufWriter};
 use tokio::signal::unix::{signal, SignalKind};
 
 use log_message::LogMessage;
@@ -13,6 +13,7 @@ async fn main() -> Result<(), Error> {
     let mut sigint = signal(SignalKind::interrupt())?;
     let mut sigterm = signal(SignalKind::terminate())?;
     let mut reader = BufReader::new(io::stdin());
+    let mut writer = BufWriter::new(io::stdout());
     let mut input = String::new();
 
     let env_params = config::get_env_params();
@@ -35,7 +36,7 @@ async fn main() -> Result<(), Error> {
 
                 msg.enrich_with_timestamp(&timestamp)?;
 
-                println!("{}", msg);
+                writer.write_all(msg.to_string().as_bytes()).await?;
             }
             _ = sigint.recv() => {
                 println!("SIGINT received");
@@ -46,6 +47,9 @@ async fn main() -> Result<(), Error> {
                 break;
             }
         }
+
+        writer.write_u8(b'\n').await?;
+        writer.flush().await?;
     }
 
     Ok(())
