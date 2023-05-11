@@ -2,14 +2,19 @@ mod config;
 mod log_message;
 
 use anyhow::Error;
+use log::{debug, error};
 use tokio::io::{self, AsyncBufReadExt, AsyncWriteExt};
 use tokio::io::{BufReader, BufWriter};
 use tokio::signal::unix::{signal, SignalKind};
 
 use log_message::LogMessage;
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    env_logger::init();
+
     let mut sigint = signal(SignalKind::interrupt())?;
     let mut sigterm = signal(SignalKind::terminate())?;
     let mut reader = BufReader::new(io::stdin());
@@ -30,7 +35,8 @@ async fn main() -> Result<(), Error> {
                 let mut msg: LogMessage = input.trim().into();
 
                 if let Err(e) = enrich_with_params(&mut msg, &env_params) {
-                    writer.write_all(format!("{}\n", e).as_bytes()).await?;
+                    error!("Failed to enrich log message: {}", e);
+
                     continue;
                 }
 
@@ -41,11 +47,11 @@ async fn main() -> Result<(), Error> {
                 writer.write_all(format!("{}\n", msg).as_bytes()).await?;
             }
             _ = sigint.recv() => {
-                writer.write_all(b"SIGINT received\n").await?;
+                debug!("SIGINT received");
                 break;
             }
             _ = sigterm.recv() => {
-                writer.write_all(b"SIGTERM received\n").await?;
+                debug!("SIGTERM received");
                 break;
             }
         }
@@ -60,6 +66,8 @@ fn enrich_with_params(msg: &mut LogMessage, env_params: &config::EnvParams) -> R
     for (k, v) in env_params.iter() {
         msg.enrich(k, v)?;
     }
+
+    msg.enrich("@wrapper_version", VERSION)?;
 
     Ok(())
 }
