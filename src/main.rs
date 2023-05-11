@@ -41,15 +41,17 @@ async fn main() -> Result<(), Error> {
                 writer.write_all(format!("{}\n", msg).as_bytes()).await?;
             }
             _ = sigint.recv() => {
-                println!("SIGINT received");
+                writer.write_all(b"SIGINT received\n").await?;
                 break;
             }
             _ = sigterm.recv() => {
-                println!("SIGTERM received");
+                writer.write_all(b"SIGTERM received\n").await?;
                 break;
             }
         }
     }
+
+    writer.flush().await?;
 
     Ok(())
 }
