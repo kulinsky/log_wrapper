@@ -57,18 +57,14 @@ impl LogMessage {
 
 impl std::fmt::Display for LogMessage {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for m in self.msg.iter() {
-            match m {
-                Value::Array(arr) => {
-                    for v in arr.iter() {
-                        write!(f, "{}", v)?;
-                    }
-                }
-                _ => {
-                    write!(f, "{}", m)?;
-                }
-            }
-        }
+        let res = self
+            .msg
+            .iter()
+            .map(|x| format!("{}", x))
+            .collect::<Vec<String>>()
+            .join("\n");
+
+        write!(f, "{}", res)?;
 
         Ok(())
     }
