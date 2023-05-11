@@ -1,4 +1,6 @@
-pub fn get_env_params<'a>() -> [(&'a str, String); 4] {
+pub type EnvParams = [(&'static str, String); 4];
+
+pub fn get_env_params() -> EnvParams {
     [
         (
             "container_name",

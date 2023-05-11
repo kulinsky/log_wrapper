@@ -20,6 +20,7 @@ async fn main() -> Result<(), Error> {
 
     loop {
         input.clear();
+        writer.flush().await?;
 
         tokio::select! {
             // _ = tokio::time::sleep(std::time::Duration::from_secs(1)) => {
@@ -28,15 +29,17 @@ async fn main() -> Result<(), Error> {
             _ = reader.read_line(&mut input) => {
                 let mut msg: LogMessage = input.trim().into();
 
-                for (k, v) in env_params.iter() {
-                    msg.enrich(k, v)?;
+                if enrich_with_params(&mut msg, &env_params).is_err() {
+                    let e = anyhow::anyhow!("Failed to enrich message: {}", msg.to_string());
+                    writer.write_all(format!("{}\n", e).as_bytes()).await?;
+                    continue;
                 }
 
                 let timestamp = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
 
                 msg.enrich_with_timestamp(&timestamp)?;
 
-                writer.write_all(msg.to_string().as_bytes()).await?;
+                writer.write_all(format!("{}\n", msg).as_bytes()).await?;
             }
             _ = sigint.recv() => {
                 println!("SIGINT received");
@@ -47,9 +50,14 @@ async fn main() -> Result<(), Error> {
                 break;
             }
         }
+    }
 
-        writer.write_u8(b'\n').await?;
-        writer.flush().await?;
+    Ok(())
+}
+
+fn enrich_with_params(msg: &mut LogMessage, env_params: &config::EnvParams) -> Result<(), Error> {
+    for (k, v) in env_params.iter() {
+        msg.enrich(k, v)?;
     }
 
     Ok(())

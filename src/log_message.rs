@@ -85,7 +85,11 @@ impl From<&str> for LogMessage {
                 Value::Object(v) => msg.push(Value::Object(v)),
                 Value::Array(arr) => {
                     for v in arr {
-                        msg.push(v);
+                        match v {
+                            Value::Object(obj) => msg.push(Value::Object(obj)),
+                            _ => msg
+                                .push(LogMessage::get_value_from_unparsed(v.to_string().as_str())),
+                        }
                     }
                 }
                 _ => msg.push(LogMessage::get_value_from_unparsed(data)),
