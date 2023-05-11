@@ -60,7 +60,7 @@ impl std::fmt::Display for LogMessage {
         let res = self
             .msg
             .iter()
-            .map(|x| format!("{}", x))
+            .map(|x| x.to_string())
             .collect::<Vec<String>>()
             .join("\n");
 
