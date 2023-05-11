@@ -39,15 +39,13 @@ async fn main() -> Result<(), Error> {
 
                 let mut msg: LogMessage = input.trim().into();
 
-                if let Err(e) = enrich_with_params(&mut msg, &env_params) {
+                let timestamp = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
+
+                if let Err(e) = enrich_with_params(&mut msg, &env_params, &timestamp) {
                     error!("Failed to enrich log message: {}", e);
 
                     continue;
                 }
-
-                let timestamp = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
-
-                msg.enrich_with_timestamp(&timestamp)?;
 
                 writer.write_all(format!("{}\n", msg).as_bytes()).await?;
             }
@@ -67,12 +65,17 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
-fn enrich_with_params(msg: &mut LogMessage, env_params: &config::EnvParams) -> Result<(), Error> {
+fn enrich_with_params(
+    msg: &mut LogMessage,
+    env_params: &config::EnvParams,
+    timestamp: &str,
+) -> Result<(), Error> {
     for (k, v) in env_params.iter() {
         msg.enrich(k, v)?;
     }
 
     msg.enrich("@wrapper_version", VERSION)?;
+    msg.enrich_with_timestamp(&timestamp)?;
 
     Ok(())
 }
