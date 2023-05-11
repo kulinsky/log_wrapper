@@ -32,6 +32,11 @@ async fn main() -> Result<(), Error> {
             //     println!("Tick");
             // }
             _ = reader.read_line(&mut input) => {
+                if input.is_empty() {
+                    debug!("EOF received");
+                    break;
+                }
+
                 let mut msg: LogMessage = input.trim().into();
 
                 if let Err(e) = enrich_with_params(&mut msg, &env_params) {
