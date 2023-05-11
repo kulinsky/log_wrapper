@@ -29,8 +29,7 @@ async fn main() -> Result<(), Error> {
             _ = reader.read_line(&mut input) => {
                 let mut msg: LogMessage = input.trim().into();
 
-                if enrich_with_params(&mut msg, &env_params).is_err() {
-                    let e = anyhow::anyhow!("Failed to enrich message: {}", msg.to_string());
+                if let Err(e) = enrich_with_params(&mut msg, &env_params) {
                     writer.write_all(format!("{}\n", e).as_bytes()).await?;
                     continue;
                 }
